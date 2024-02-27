@@ -30,6 +30,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myweather.ui.theme.MyweatherTheme
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Query
+import retrofit2.http.GET
+import retrofit2.Response
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,6 +89,84 @@ fun WeatherApp() {
 
     }
 }
+
+private suspend fun getWeatherDta(cityName: String) {
+    val apiKey = "YOUR_API_KEY"
+    val service = RetrofitClient.weatherApi
+
+    try {
+        val response = service.getWeather(cityName, apiKey)
+        if (response.isSuccessful) {
+            val weatherResponse = response.body()
+            if (weatherResponse != null) {
+                // Process weather data and update UI
+                // For example, update text fields with weather information
+            } else {
+                // Handle null response
+            }
+        } else {
+            // Handle unsuccessful response
+        }
+    } catch (e: Exception) {
+        // Handle network errors
+    }
+}
+
+object RetrofitClient {
+    private const val BASE_URL = "https://api.openweathermap.org/data/2.5"
+
+    private val retrofit by lazy {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val request = original.newBuilder()
+                    .header("Accept", "application/json")
+                    .method(original.method, original.body)
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
+
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    val weatherApi: WeatherApi by lazy {
+        retrofit.create(WeatherApi::class.java)
+    }
+}
+
+// Define a Retrofit interface for making API requests
+interface WeatherApi {
+    @GET("weather")
+    suspend fun getWeather(
+        @Query("q") cityName: String,
+        @Query("appid") apiKey: String,
+        @Query("units") units: String = "metric", // You can change units as per your preference
+    ): Response<WeatherResponse>
+}
+
+// Define data classes to represent API response
+data class WeatherResponse(
+    val main: Main,
+    val wind: Wind,
+    // Add more fields as needed
+)
+
+data class Main(
+    val temp: Double,
+    val humidity: Int,
+    // Add more fields as needed
+)
+
+data class Wind(
+    val speed: Double,
+    // Add more fields as needed
+)
+
 
 @Preview(showBackground = true)
 @Composable
