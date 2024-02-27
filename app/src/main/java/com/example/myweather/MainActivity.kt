@@ -1,6 +1,7 @@
 package com.example.myweather
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myweather.ui.theme.MyweatherTheme
@@ -39,7 +41,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
-import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +66,8 @@ fun WeatherApp() {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    var weatherData by remember { mutableStateOf<WeatherData?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -85,15 +88,31 @@ fun WeatherApp() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { /* Fetch weather data */ },
+            onClick = { getWeatherData(searchText) { weatherData = it } },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Get Weather")
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        weatherData?.let { data ->
+            Text(
+                text = "Temperature: $data.temperature °C",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = "Humidity: $data.humidity %",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
-private fun getWeatherData(cityName: String) {
+private fun getWeatherData(cityName: String, callback: (WeatherData) -> Unit) {
     // Call the Retrofit service to fetch weather data
     val apiKey = "YOUR_API_KEY"
     val service = RetrofitClient.weatherApi
@@ -104,17 +123,21 @@ private fun getWeatherData(cityName: String) {
             if (response.isSuccessful) {
                 val weatherResponse = response.body()
                 if (weatherResponse != null) {
-                    //
-                    //
-                    //
+                    // Update UI with weather information
+                    val temperature = weatherResponse.main.temp
+                    val humidity = weatherResponse.main.humidity
+                    callback(WeatherData(temperature, humidity))
                 } else {
-                    //
+                    // Handle null response
+                    Log.e("WeatherApp", "Null response received from API")
                 }
             } else {
-                //
+                // Handle unsuccessful response
+                Log.e("WeatherApp", "Unsuccessful response: ${response.message()}")
             }
         } catch (e: Exception) {
-            // Handle network errors
+            // Handle network errors/ Handle network errors
+            Log.e("WeatherApp", "Error fetching weather data", e)
         }
     }
 }
@@ -159,14 +182,14 @@ interface WeatherApi {
 
 // Define data classes to represent API response
 data class WeatherResponse(
-    val main: Main,
+    val main: WeatherData,
     val wind: Wind,
     // Add more fields as needed
 )
 
-data class Main(
-    val temp: Double,
-    val humidity: Int,
+data class WeatherData(
+    val temp: String,
+    val humidity: String,
     // Add more fields as needed
 )
 
