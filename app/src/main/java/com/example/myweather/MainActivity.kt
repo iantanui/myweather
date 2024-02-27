@@ -30,12 +30,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myweather.ui.theme.MyweatherTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Query
 import retrofit2.http.GET
-import retrofit2.Response
+import retrofit2.http.Query
+import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,31 +90,35 @@ fun WeatherApp() {
         ) {
             Text("Get Weather")
         }
-
     }
 }
 
-private suspend fun getWeatherDta(cityName: String) {
+private fun getWeatherData(cityName: String) {
+    // Call the Retrofit service to fetch weather data
     val apiKey = "YOUR_API_KEY"
     val service = RetrofitClient.weatherApi
 
-    try {
-        val response = service.getWeather(cityName, apiKey)
-        if (response.isSuccessful) {
-            val weatherResponse = response.body()
-            if (weatherResponse != null) {
-                // Process weather data and update UI
-                // For example, update text fields with weather information
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val response = service.getWeather(cityName, apiKey)
+            if (response.isSuccessful) {
+                val weatherResponse = response.body()
+                if (weatherResponse != null) {
+                    //
+                    //
+                    //
+                } else {
+                    //
+                }
             } else {
-                // Handle null response
+                //
             }
-        } else {
-            // Handle unsuccessful response
+        } catch (e: Exception) {
+            // Handle network errors
         }
-    } catch (e: Exception) {
-        // Handle network errors
     }
 }
+
 
 object RetrofitClient {
     private const val BASE_URL = "https://api.openweathermap.org/data/2.5"
