@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,9 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myweather.ui.theme.MyweatherTheme
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -65,7 +64,9 @@ fun WeatherApp() {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val apiResponse by remember { mutableStateOf(ApiResponse("", "")) }
+    var apiResponse by remember { mutableStateOf(ApiResponse("", "")) }
+
+    var isSearchClicked by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -88,9 +89,7 @@ fun WeatherApp() {
 
         Button(
             onClick = {
-                CoroutineScope(Dispatchers.Main).launch {
-                    val apiResponse = getWeatherFromApi(searchText)
-                }
+                isSearchClicked = true
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -101,28 +100,35 @@ fun WeatherApp() {
 
 
         Text(
-            text = apiResponse.temperature,
+            text = "Temperature: ${apiResponse.temp}",
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
 
         Text(
-            text = apiResponse.humidity,
+            text = "Humidity: ${apiResponse.humidity}",
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
     }
+
+    LaunchedEffect(isSearchClicked) {
+        if (isSearchClicked && searchText.isNotBlank()) {
+            apiResponse = getWeatherFromApi(searchText)
+            isSearchClicked = false
+        }
+    }
 }
 
 data class ApiResponse(
-    val temperature: String,
+    val temp: String,
     val humidity: String,
 )
 
 object ApiConfig {
-    const val BASE_URL = ""
+    const val BASE_URL = "https://open-weather13.p.rapidapi.com/city/London"
     const val API_KEY = ""
-    const val HOST = ""
+    const val HOST = "open-weather13.p.rapidapi.com"
 }
 
 suspend fun getWeatherFromApi(cityName: String): ApiResponse {
@@ -142,9 +148,12 @@ suspend fun getWeatherFromApi(cityName: String): ApiResponse {
             if (response.isSuccessful) {
                 val responseBody = response.body?.string() ?: ""
                 val jsonObject = JSONObject(responseBody)
-                val temperature = jsonObject.optString("temperature", "")
-                val humidity = jsonObject.optString("humidity", "")
-                ApiResponse(temperature, humidity)
+
+                val mainObject = jsonObject.optJSONObject("main")
+                val temp = mainObject?.optDouble("temp", Double.NaN)?.toString() ?: ""
+                val humidity = mainObject?.optInt("humidity", -1)?.toString() ?: ""
+
+                ApiResponse(temp, humidity)
             } else {
                 ApiResponse("Request failed with code: ${response.code}", "")
             }
