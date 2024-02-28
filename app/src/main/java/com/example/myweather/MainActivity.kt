@@ -67,6 +67,7 @@ fun WeatherApp() {
     var apiResponse by remember { mutableStateOf(ApiResponse("", "")) }
 
     var isSearchClicked by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -98,6 +99,15 @@ fun WeatherApp() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Display error message if any
+        if (errorMessage.isNotEmpty()) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         Text(
             text = "Temperature: ${apiResponse.temp}",
