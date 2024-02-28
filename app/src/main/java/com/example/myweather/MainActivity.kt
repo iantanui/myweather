@@ -31,6 +31,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myweather.ui.theme.MyweatherTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONException
@@ -61,7 +65,7 @@ fun WeatherApp() {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    var apiResponse by remember { mutableStateOf(ApiResponse("","")) }
+    val apiResponse by remember { mutableStateOf(ApiResponse("", "")) }
 
     Column(
         modifier = Modifier
@@ -83,7 +87,11 @@ fun WeatherApp() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { apiResponse = getWeatherFromApi(searchText) },
+            onClick = {
+                CoroutineScope(Dispatchers.Main).launch {
+                    val apiResponse = getWeatherFromApi(searchText)
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Get Weather")
@@ -117,32 +125,34 @@ object ApiConfig {
     const val HOST = ""
 }
 
-fun getWeatherFromApi(cityName: String): ApiResponse {
-    val client = OkHttpClient()
+suspend fun getWeatherFromApi(cityName: String): ApiResponse {
+    return withContext(Dispatchers.IO) {
+        val client = OkHttpClient()
 
-    val request = Request.Builder()
-        .url(ApiConfig.BASE_URL)
-        .get()
-        .addHeader("X-RapidAPI-Key", ApiConfig.API_KEY)
-        .addHeader("X-RapidAPI-Host", ApiConfig.HOST)
-        .build()
+        val request = Request.Builder()
+            .url(ApiConfig.BASE_URL)
+            .get()
+            .addHeader("X-RapidAPI-Key", ApiConfig.API_KEY)
+            .addHeader("X-RapidAPI-Host", ApiConfig.HOST)
+            .build()
 
-    return try {
-        val response = client.newCall(request).execute()
+        try {
+            val response = client.newCall(request).execute()
 
-        if (response.isSuccessful) {
-            val responseBody = response.body?.string() ?: ""
-            val jsonObject = JSONObject(responseBody)
-            val temperature = jsonObject.optString("temperature", "")
-            val humidity = jsonObject.optString("humidity", "")
-            return ApiResponse(temperature, humidity)
-        } else {
-            ApiResponse("Request failed with code: ${response.code}", "")
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string() ?: ""
+                val jsonObject = JSONObject(responseBody)
+                val temperature = jsonObject.optString("temperature", "")
+                val humidity = jsonObject.optString("humidity", "")
+                ApiResponse(temperature, humidity)
+            } else {
+                ApiResponse("Request failed with code: ${response.code}", "")
+            }
+        } catch (e: IOException) {
+            ApiResponse("Network error occurred: ${e.message}", "")
+        } catch (e: JSONException) {
+            ApiResponse("Error parsing JSON: ${e.message}", "")
         }
-    } catch (e: IOException) {
-        ApiResponse("Network error occurred: ${e.message}", "")
-    } catch (e: JSONException) {
-        return ApiResponse("Error parsing JSON: ${e.message}", "")
     }
 }
 
