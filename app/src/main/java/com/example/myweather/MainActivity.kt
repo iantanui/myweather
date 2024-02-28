@@ -114,7 +114,6 @@ fun WeatherApp() {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
             ) {
                 Column(
                     modifier = Modifier.padding(8.dp)
